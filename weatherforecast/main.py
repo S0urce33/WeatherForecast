@@ -1,10 +1,14 @@
 from time import sleep
+import sys
+import os
 try:
     import requests
     import PySimpleGUI as sg
+    from plyer import notification as nf
 except ImportError:
-    print("Required modules not found. Please install them using 'pip install requests PySimpleGUI'")
+    print("Required modules not found. Please install them using 'pip install requests PySimpleGUI plyer'")
     sleep(5)
+    sys.exit()
 
 
 def weather_image(condition_text, is_day=True):
@@ -43,6 +47,8 @@ while True:
         if not city:
             sg.popup("Please enter a city first.")
             continue
+        notification_enabled = False
+    
 
        
         days = sg.popup_get_text(
@@ -85,19 +91,26 @@ while True:
                 )
                 window['Average Wind Speed:'].update(
                     f" Average Wind Speed for day {i+1}: {day_data['maxwind_kph']} km/h"
-                )  
-
+                ) 
+                notification_enabled = True
+                if notification_enabled:
+                    nf.notify(
+                        title=f"Weather Forecast for {data['location']['name']}, {data['location']['region']}, {data['location']['country']} - Day {i+1}",
+                        message=f"Average Temperature: {day_data['avgtemp_c']}°C\nAverage Wind Speed: {day_data['maxwind_kph']} km/h",
+                        timeout=5
+                    ) #the program needs to be terminated for this notification loop to stop, this bug will be fixed soon
                
                 cycle_event, _ = window.read(timeout=1000)
 
                 if cycle_event == 'Get Weather':
+                    notification_enabled = False
                     break
 
                 if cycle_event in (sg.WINDOW_CLOSED, 'Exit'):
                     window.close()
-                    exit()  
+                    os._exit(0)  
 
-                i = (i + 1) % int(days)  
+                i = (i + 1) % int(days)
         else:
             forecast_day = data['forecast']['forecastday'][0]
             day_data = forecast_day['day']
@@ -114,5 +127,14 @@ while True:
             )
             window['Average Temperature:'].update(f" Temperature: {day_data['avgtemp_c']}°C")
             window['Average Wind Speed:'].update(f" Wind Speed: {day_data['maxwind_kph']} km/h")  
-              
+            notification_enabled = True
+            if notification_enabled:
+                nf.notify(
+                    title=f"Weather Forecast for {data['location']['name']}, {data['location']['region']}, {data['location']['country']}",
+                    message=f"Temperature: {day_data['avgtemp_c']}°C\nWind Speed: {day_data['maxwind_kph']} km/h",
+                    timeout=5
+                )
+            
+
 window.close()
+os._exit(0)
